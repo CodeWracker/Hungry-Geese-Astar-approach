@@ -8,6 +8,9 @@ requests = "*"
 pandas = "*"
 ipython = "*"
 kaggle-environments = "*"
+matplotlib = "*"
+tqdm = "*"
+plotly = "*"
 
 [dev-packages]
 

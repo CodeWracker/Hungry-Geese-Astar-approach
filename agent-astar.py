@@ -56,7 +56,9 @@ class AStar():
     def search(self):
         global ralph_last_action
         self.walk([self.start],ralph_last_action[self.player_index])
-        while True:
+        max_exploration = 1000
+        aux = 0
+        while aux<=max_exploration:
             f = None
             pathd = None
             for p in self.frontier:
@@ -69,6 +71,8 @@ class AStar():
                     f = f_n
                     pathd = p
             path = deepcopy(pathd)
+            if(path is None):
+                return None
             self.frontier.remove(pathd)
             cam = deepcopy(path.caminho)
             pos = path.next_p
@@ -80,7 +84,8 @@ class AStar():
 
             cam.append(path.next_p)
             self.walk(cam,path.caminho[len(path.caminho) - 1])
-            
+            aux = aux +1
+        return None
     def vizinhos(self,pos):
         row, col = pos
         candidates = [
@@ -224,6 +229,15 @@ def get_choice(path, pos,rows,cols):
         
         if(r == path[0] and c == path[1]):
             return action
+def opposite(action):
+    if action == Action.NORTH.name:
+        return Action.SOUTH.name
+    if action == Action.SOUTH.name:
+        return Action.NORTH.name
+    if action == Action.EAST.name:
+        return Action.WEST.name
+    if action == Action.WEST.name:
+        return Action.EAST.name
 
 def agent(obs_dict,config_dict):
     global ralph_last_action
@@ -234,22 +248,22 @@ def agent(obs_dict,config_dict):
 
     astar = AStar(observation, configuration)
     path = astar.search()
-    cam = []
-    if(len(path.caminho)>1):
-        cam = path.caminho[1]
+    choice = ""
+    if(path is not None):
+        cam = []
+        if(len(path.caminho)>1):
+            cam = path.caminho[1]
+        else:
+            cam = path.next_p
+        choice = get_choice(cam,astar.start,astar.rows,astar.cols)
+        print(choice)
+        for line in astar.heu_map:
+            print(line)
     else:
-        cam = path.next_p
-    choice = get_choice(cam,astar.start,astar.rows,astar.cols)
-    print(choice)
-    for line in astar.heu_map:
-        print(line)
-    '''
-    state = get_grid_from_obs(obs,config.columns,config.rows)
-    state = np.reshape(state, [1, nS])
-    action =np.argmax(dqn.model.predict(state)) 
-    actL = []
-    for act in Action:
-            actL.append(act)
-    '''
+        choice = opposite(
+        get_choice(ralph_last_action[observation.index],astar.start,astar.rows,astar.cols)
+        )
+    
+    
     ralph_last_action[observation.index] = astar.start
     return choice
