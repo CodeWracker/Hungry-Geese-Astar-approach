@@ -32,10 +32,10 @@ class AStar():
         self.rows = configuration.rows
         self.cols = configuration.columns
         self.player_index = self.obs.index
+        self.start = row_col(self.obs.geese[self.player_index][0],self.cols)
         self.mapa = self.get_grid_from_obs()
         self.heu_map = self.heristic()
         self.frontier = []
-        self.start = row_col(self.obs.geese[self.player_index][0],self.cols)
     
     def walk(self,cam,last):
         pos = cam[len(cam) - 1]
@@ -119,44 +119,57 @@ class AStar():
         # 2: "Parede" (inimigos ou a ultima posicao)
         # 3: Comida (Objetivo)
 
-            global ralph_last_action
-            last_pos = ralph_last_action[self.player_index]
-            mapa = []
-            row = []
-            for i in range(0,self.rows):
-                mapa.append([])
+        global ralph_last_action
+        last_pos = ralph_last_action[self.player_index]
+        mapa = []
+        row = []
+        for i in range(0,self.rows):
+            mapa.append([])
 
-                for j in range(0,self.cols):
-                    achou = False
-                    
-                    for food in self.obs['food']:
-                        x,y = row_col(food,self.cols)
+            for j in range(0,self.cols):
+                achou = False
+                
+                for food in self.obs['food']:
+                    x,y = row_col(food,self.cols)
+                    if(x == i and y == j):
+                        mapa[i].append(3)
+                        achou = True
+                        break
+                if(achou):
+                    continue
+                if(last_pos):
+                    if(last_pos[0] == i and last_pos[1] == j):
+                        mapa[i].append(2)
+                        continue
+                for goose in self.obs['geese']:
+                    gs = 2
+                    for part in goose:
+                        x,y = row_col(part,self.cols)
                         if(x == i and y == j):
-                            mapa[i].append(3)
+                            if(gs == 1 and last_pos == ralph_last_action[self.player_index]):
+                                ralph_last_action[self.player_index] = [i,j]
+                            mapa[i].append(gs)
                             achou = True
                             break
                     if(achou):
-                        continue
-                    if(last_pos):
-                        if(last_pos[0] == i and last_pos[1] == j):
-                            mapa[i].append(2)
-                            continue
-                    for goose in self.obs['geese']:
-                        gs = 2
-                        for part in goose:
-                            x,y = row_col(part,self.cols)
-                            if(x == i and y == j):
-                                if(gs == 1 and last_pos == ralph_last_action[self.player_index]):
-                                    ralph_last_action[self.player_index] = [i,j]
-                                mapa[i].append(gs)
-                                achou = True
-                                break
-                        if(achou):
-                            break
-                    if(achou):
-                        continue
-                    mapa[i].append(0)
-            return np.array(mapa)
+                        break
+                if(achou):
+                    continue
+                mapa[i].append(0)
+        pprint(mapa)
+        print()
+        for goose in self.obs.geese:
+            if(len(goose)==0):
+                continue
+            x,y = row_col(goose[0],self.cols)
+            if( x == self.start[0] and y == self.start[1]):
+                continue
+            viz = self.vizinhos([x,y])
+            for v in viz:
+                action, (row,col) = v
+                mapa[row][col] = 2
+        pprint(mapa)
+        return np.array(mapa)
 
     def border_distance(self,p,lim):
         d = 0
@@ -203,7 +216,7 @@ class AStar():
                         if(d>self.distance(i, j, pos[0], pos[1])):
                             d = self.distance(i, j, pos[0], pos[1])
                     heu[i].append(d)
-
+        
         return np.array(heu,dtype="int32")
 def get_choice(path, pos,rows,cols):
     row = pos[0]
@@ -248,7 +261,7 @@ def agent(obs_dict,config_dict):
 
     astar = AStar(observation, configuration)
     path = astar.search()
-    choice = ""
+    choice = "WEST"
     if(path is not None):
         cam = []
         if(len(path.caminho)>1):
@@ -257,13 +270,19 @@ def agent(obs_dict,config_dict):
             cam = path.next_p
         choice = get_choice(cam,astar.start,astar.rows,astar.cols)
         print(choice)
-        for line in astar.heu_map:
-            print(line)
+        '''for line in astar.heu_map:
+            print(line)'''
     else:
-        choice = opposite(
-        get_choice(ralph_last_action[observation.index],astar.start,astar.rows,astar.cols)
-        )
+        if(ralph_last_action[observation.index] is not None):
+            choice = opposite(
+            get_choice(ralph_last_action[observation.index],astar.start,astar.rows,astar.cols)
+            )
+        else:
+            coice = "WEST"
     
     
+        print()
+        print()
+        print()
     ralph_last_action[observation.index] = astar.start
     return choice
